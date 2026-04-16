@@ -16,8 +16,16 @@ namespace FileCompare
 
         private void Form1_Load(object sender, EventArgs e) { }
         private void splitContainer1_Panel2_Paint(object sender, PaintEventArgs e) { }
-        private void btnCopyFromLeft_Click(object sender, EventArgs e) { }
-        private void btnCopyFromRight_Click(object sender, EventArgs e) { }
+
+        private void btnCopyFromLeft_Click(object sender, EventArgs e)
+        {
+            ExecuteCopy(txtLeftDir.Text, txtRightDir.Text);
+        }
+
+        private void btnCopyFromRight_Click(object sender, EventArgs e)
+        {
+            ExecuteCopy(txtRightDir.Text, txtLeftDir.Text);
+        }
 
         private void btnLeftDir_Click(object sender, EventArgs e)
         {
@@ -53,6 +61,51 @@ namespace FileCompare
             }
         }
 
+        private void ExecuteCopy(string sourcePath, string targetPath)
+        {
+            if (!Directory.Exists(sourcePath) || !Directory.Exists(targetPath)) return;
+
+            DirectoryInfo sourceDir = new DirectoryInfo(sourcePath);
+            FileInfo[] sourceFiles = sourceDir.GetFiles();
+
+            foreach (var srcFile in sourceFiles)
+            {
+                string destFile = Path.Combine(targetPath, srcFile.Name);
+
+                if (File.Exists(destFile))
+                {
+                    FileInfo targetFile = new FileInfo(destFile);
+
+                    if (srcFile.Length == targetFile.Length && srcFile.LastWriteTime.Equals(targetFile.LastWriteTime))
+                    {
+                        continue;
+                    }
+
+                    if (srcFile.LastWriteTime > targetFile.LastWriteTime)
+                    {
+                        File.Copy(srcFile.FullName, destFile, true);
+                    }
+                    else if (srcFile.LastWriteTime < targetFile.LastWriteTime)
+                    {
+                        string msg = $"{srcFile.Name}은 대상 폴더의 파일보다 오래된 버전입니다. 정말 덮어씌우시겠습니까?";
+                        if (MessageBox.Show(msg, "복사 확인", MessageBoxButtons.YesNo) == DialogResult.Yes)
+                        {
+                            File.Copy(srcFile.FullName, destFile, true);
+                        }
+                    }
+                    else
+                    {
+                        File.Copy(srcFile.FullName, destFile, true);
+                    }
+                }
+                else
+                {
+                    File.Copy(srcFile.FullName, destFile, true);
+                }
+            }
+            CompareAndDisplayFolders();
+        }
+
         private void CompareAndDisplayFolders()
         {
             string leftPath = txtLeftDir.Text;
@@ -83,7 +136,6 @@ namespace FileCompare
 
                 if (leftFile != null && rightFile != null)
                 {
-                    // 1. 이름, 크기, 수정시간이 모두 같은 경우
                     if (leftFile.Length == rightFile.Length && leftFile.LastWriteTime.Equals(rightFile.LastWriteTime))
                     {
                         leftItem.ForeColor = Color.Black;
@@ -91,20 +143,18 @@ namespace FileCompare
                     }
                     else
                     {
-                        // 2. 이름은 같지만 데이터(크기/시간)가 다른 경우 [수정 부분]
                         if (leftFile.LastWriteTime > rightFile.LastWriteTime)
                         {
-                            leftItem.ForeColor = Color.Red;     // 최신 파일
-                            rightItem.ForeColor = Color.Gray;    // [수정됨] 오래된 파일
+                            leftItem.ForeColor = Color.Red;
+                            rightItem.ForeColor = Color.Gray;
                         }
                         else if (leftFile.LastWriteTime < rightFile.LastWriteTime)
                         {
-                            leftItem.ForeColor = Color.Gray;    // [수정됨] 오래된 파일
-                            rightItem.ForeColor = Color.Red;     // 최신 파일
+                            leftItem.ForeColor = Color.Gray;
+                            rightItem.ForeColor = Color.Red;
                         }
                         else
                         {
-                            // 수정시간은 같은데 크기가 다른 경우 등 예외 처리
                             leftItem.ForeColor = Color.Red;
                             rightItem.ForeColor = Color.Red;
                         }
@@ -112,7 +162,6 @@ namespace FileCompare
                 }
                 else
                 {
-                    // 3. 한 쪽에만 파일이 있는 경우
                     if (leftFile != null) leftItem.ForeColor = Color.Purple;
                     if (rightFile != null) rightItem.ForeColor = Color.Purple;
                 }
